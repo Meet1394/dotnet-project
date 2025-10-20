@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center" style="padding: 100px 0;">
+    <h1 class="display-4">Welcome to Personal Cloud Drive</h1>
+    <p class="lead">Your secure personal storage solution</p>
+    
+    <div class="mt-5">
+        <a asp-controller="Account" asp-action="Register" class="btn btn-primary btn-lg me-3">
+            <i class="bi bi-person-plus"></i> Get Started
+        </a>
+        <a asp-controller="Account" asp-action="Login" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right"></i> Sign In
+        </a>
+    </div>
+
+    <div class="mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-shield-check" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Secure Storage</h5>
+                        <p class="card-text">Your files are encrypted and stored securely</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-cloud-upload" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Easy Upload</h5>
+                        <p class="card-text">Drag and drop files to upload instantly</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-share" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Share Files</h5>
+                        <p class="card-text">Share files securely with anyone</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

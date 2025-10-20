@@ -1,0 +1,171 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    var user = ViewBag.User as PersonalCloudDrive.Models.ApplicationUser;
+    var storageUsedPercentage = ViewBag.StorageUsedPercentage;
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Welcome, @user.Email!</h2>
+        </div>
+        <div class="col-auto">
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                <button type="submit" class="btn btn-outline-danger">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Total Files</h5>
+                    <h2 id="totalFilesCount">@ViewBag.TotalFiles</h2>
+                </div>
+            </div>
+        </div>
+                @section Scripts {
+                    <script>
+                        (function(){
+                            const uploadBtn = document.getElementById('uploadBtn');
+                            const fileInput = document.getElementById('fileInput');
+                            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                            uploadBtn?.addEventListener('click', function(e){
+                                e.preventDefault();
+                                fileInput?.click();
+                            });
+
+                            fileInput?.addEventListener('change', function(e){
+                                const files = fileInput.files;
+                                if (!files || files.length === 0) return;
+
+                                const formData = new FormData();
+                                for (let i = 0; i < files.length; i++) {
+                                    formData.append('files', files[i]);
+                                }
+
+                                // add antiforgery token
+                                if (antiforgeryToken) formData.append('__RequestVerificationToken', antiforgeryToken);
+
+                                fetch('/Dashboard/UploadFiles', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                .then(resp => {
+                                    if (!resp.ok) throw resp;
+                                    return resp.json();
+                                })
+                                .then(data => {
+                                    if (data.success) {
+                                        document.getElementById('totalFilesCount').textContent = data.totalFiles;
+                                        document.getElementById('totalFoldersCount').textContent = data.totalFolders;
+                                        const pct = parseFloat(data.storageUsedPercentage) || 0;
+                                        const progressBar = document.getElementById('storageProgressBar');
+                                        progressBar.style.width = pct + '%';
+                                        progressBar.setAttribute('aria-valuenow', pct);
+                                        progressBar.textContent = pct.toFixed(2) + '%';
+                                        const usedMB = (data.storageUsed / 1024.0 / 1024.0).toFixed(2);
+                                        const limitMB = (data.storageLimit / 1024.0 / 1024.0).toFixed(2);
+                                        document.getElementById('storageText').textContent = usedMB + ' MB of ' + limitMB + ' MB';
+                                        // optionally reload recent files or the page
+                                        location.reload();
+                                    } else {
+                                        alert('Upload failed');
+                                    }
+                                })
+                                .catch(async err => {
+                                    try {
+                                        const json = await err.json();
+                                        alert('Upload error: ' + (json.message || err.statusText));
+                                    } catch(e) {
+                                        alert('Upload error');
+                                    }
+                                });
+                            });
+                        })();
+                    </script>
+                }
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Total Folders</h5>
+                    <h2 id="totalFoldersCount">@ViewBag.TotalFolders</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Storage Used</h5>
+                        <div class="progress" style="height: 25px;">
+                        <div id="storageProgressBar" class="progress-bar bg-info" role="progressbar" 
+                             style="width: @storageUsedPercentage;%" 
+                             aria-valuenow="@storageUsedPercentage" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            @string.Format("{0:0.00}%", storageUsedPercentage)
+                        </div>
+                    </div>
+                    <small id="storageText" class="text-muted">
+                        @string.Format("{0:0.00} MB", user.StorageUsed / 1024.0 / 1024.0) of 
+                        @string.Format("{0:0.00} MB", user.StorageLimit / 1024.0 / 1024.0)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Files -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Recent Files</h5>
+                </div>
+                <div class="card-body">
+                    @if (ViewBag.RecentFiles != null && ViewBag.RecentFiles.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>File Name</th>
+                                        <th>Type</th>
+                                        <th>Size</th>
+                                        <th>Uploaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var file in ViewBag.RecentFiles)
+                                    {
+                                        <tr>
+                                            <td>@file.FileName</td>
+                                            <td><span class="badge bg-secondary">@file.FileType</span></td>
+                                            <td>@string.Format("{0:0.00} MB", file.FileSize / 1024.0 / 1024.0)</td>
+                                            <td>@file.UploadedOn.ToString("MMM dd, yyyy HH:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No files uploaded yet. Start by uploading your first file!</p>
+                            <button id="uploadBtn" class="btn btn-primary">Upload Files</button>
+                            <form id="hiddenUploadForm" asp-controller="Dashboard" asp-action="UploadFiles" method="post" enctype="multipart/form-data" style="display:none">
+                                @Html.AntiForgeryToken()
+                                <input id="fileInput" type="file" name="files" multiple />
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

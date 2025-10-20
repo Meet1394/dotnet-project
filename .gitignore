@@ -1,0 +1,47 @@
+# .gitignore for ASP.NET Core
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sdf
+*.db
+.vs/
+.vscode/
+*.dbmdl
+*.bak
+
+# User-specific files
+*.DS_Store
+*.log
+
+# Visual Studio temporary files
+*.cache
+
+# Rider
+.idea/
+
+# Publish output
+publish/
+
+# NPM
+node_modules/
+
+# uploads (user data) - do not commit uploaded files
+wwwroot/uploads/
+
+# User secrets
+secrets.json
+appsettings.Local.json
+
+# JetBrains Rider
+.idea/
+
+# kestrel temporary
+*.pid
+
+# EF Migrations history (keep migrations but not build outputs)
+*/Migrations/**/bin/
+*/Migrations/**/obj/
+
+.fake
