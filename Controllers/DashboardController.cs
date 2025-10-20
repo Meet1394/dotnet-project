@@ -73,7 +73,7 @@ namespace PersonalCloudDrive.Controllers
                 .CountAsync();
 
             var totalFolders = await _context.Folders
-                .Where(f => f.UserId == userId && !f.IsDeleted)
+                .Where(f => f.UserId == userId && !f.IsDeleted && f.ParentFolderId != null)
                 .CountAsync();
 
             var recentFiles = await _context.Files
@@ -277,7 +277,29 @@ namespace PersonalCloudDrive.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Json(new { success = true });
+            
+            // Get updated statistics
+            var totalFiles = await _context.Files
+                .Where(f => f.UserId == userId && !f.IsDeleted)
+                .CountAsync();
+
+            var totalFolders = await _context.Folders
+                .Where(f => f.UserId == userId && !f.IsDeleted && f.ParentFolderId != null)
+                .CountAsync();
+
+            var currentUser = await _userManager.FindByIdAsync(userId);
+            var storageUsedPercentage = (currentUser != null && currentUser.StorageLimit > 0)
+                ? (currentUser.StorageUsed * 100.0 / currentUser.StorageLimit)
+                : 0.0;
+
+            return Json(new { 
+                success = true, 
+                totalFiles, 
+                totalFolders, 
+                storageUsedPercentage,
+                storageUsed = currentUser?.StorageUsed ?? 0,
+                storageLimit = currentUser?.StorageLimit ?? 0
+            });
         }
     }
 }

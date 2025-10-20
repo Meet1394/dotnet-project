@@ -74,6 +74,9 @@
                         </div>
                     </div>
                     <div class="ms-auto d-flex gap-2">
+                        <button id="backBtn" class="btn btn-outline-light btn-sm" style="display: none;">
+                            <i class="fas fa-arrow-left me-1"></i>Back
+                        </button>
                         <button id="createFolderBtn" class="btn btn-light btn-sm">
                             <i class="fas fa-folder-plus me-1"></i>Create Folder
                         </button>
@@ -101,9 +104,11 @@
             const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
             const parentFolderInput = document.getElementById('parentFolderId');
             const createFolderBtn = document.getElementById('createFolderBtn');
+            const backBtn = document.getElementById('backBtn');
             
-            // Track current folder context
+            // Track current folder context and navigation history
             let currentFolderId = '';
+            let folderHistory = [];
 
             uploadBtn?.addEventListener('click', function(e){
                 e.preventDefault();
@@ -191,7 +196,7 @@
                 if (e.target.classList.contains('enter-folder-btn') || e.target.closest('.enter-folder-btn')) {
                     const button = e.target.classList.contains('enter-folder-btn') ? e.target : e.target.closest('.enter-folder-btn');
                     const folderId = button.getAttribute('data-folder-id');
-                    loadFilesForFolder(folderId);
+                    loadFilesForFolder(folderId, true); // true = add to history
                 }
             });
 
@@ -210,6 +215,25 @@
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.success) {
+                            // Update statistics
+                            if (data.totalFiles !== undefined) {
+                                document.getElementById('totalFilesCount').textContent = data.totalFiles;
+                            }
+                            if (data.totalFolders !== undefined) {
+                                document.getElementById('totalFoldersCount').textContent = data.totalFolders;
+                            }
+                            if (data.storageUsedPercentage !== undefined) {
+                                const pct = parseFloat(data.storageUsedPercentage) || 0;
+                                const progressBar = document.getElementById('storageProgressBar');
+                                progressBar.style.width = pct + '%';
+                                progressBar.setAttribute('aria-valuenow', pct);
+                                progressBar.textContent = pct.toFixed(2) + '%';
+                            }
+                            if (data.storageUsed !== undefined && data.storageLimit !== undefined) {
+                                const usedMB = (data.storageUsed / 1024.0 / 1024.0).toFixed(2);
+                                const limitMB = (data.storageLimit / 1024.0 / 1024.0).toFixed(2);
+                                document.getElementById('storageText').textContent = usedMB + ' MB of ' + limitMB + ' MB';
+                            }
                             // Reload current folder view instead of full page reload
                             loadFilesForFolder(currentFolderId);
                         } else {
@@ -220,11 +244,30 @@
                 }
             });
 
+            // Back button functionality
+            backBtn?.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (folderHistory.length > 0) {
+                    const previousFolder = folderHistory.pop();
+                    loadFilesForFolder(previousFolder, false); // false = don't add to history
+                } else {
+                    loadFilesForFolder('', false); // Go to root
+                }
+            });
+
             // Folder navigation is now handled by enter-folder-btn clicks
 
-            function loadFilesForFolder(folderId) {
+            function loadFilesForFolder(folderId, addToHistory = true) {
                 // Update current folder context
+                if (addToHistory && currentFolderId !== folderId) {
+                    folderHistory.push(currentFolderId);
+                }
                 currentFolderId = folderId || '';
+                
+                // Show/hide back button
+                if (backBtn) {
+                    backBtn.style.display = (folderId && folderId !== '') ? 'block' : 'none';
+                }
                 
                 fetch(`/Dashboard/GetFilesForFolder?folderId=${folderId}`)
                     .then(resp => resp.json())
@@ -371,7 +414,7 @@
             }
 
             // Initial load: show files for root (no folder selected)
-            loadFilesForFolder("");
+            loadFilesForFolder("", false); // false = don't add to history for initial load
 
             // Create folder flow
             createFolderBtn?.addEventListener('click', function(e) {
