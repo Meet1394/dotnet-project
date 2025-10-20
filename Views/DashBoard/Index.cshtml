@@ -4,12 +4,7 @@
     var storageUsedPercentage = ViewBag.StorageUsedPercentage;
 }
         <div class="col">
-            <h2>Welcome, @user.Email!</h2>
-        </div>
-        <div class="col-auto">
-            <form asp-controller="Account" asp-action="Logout" method="post">
-                <button type="submit" class="btn btn-outline-danger">Logout</button>
-            </form>
+            <h2>@user.Email</h2>
         </div>
     </div>
 
@@ -59,53 +54,41 @@
             <div class="card shadow">
                 <div class="card-header bg-white d-flex align-items-center">
                     <h5 class="mb-0">Recent Files</h5>
-                    <div class="ms-auto">
+                    <div class="ms-3">
+                        <select id="folderSelect" class="form-select form-select-sm">
+                            <option value="">Root</option>
+                            @if (ViewBag.Folders != null)
+                            {
+                                foreach (var f in (List<PersonalCloudDrive.Models.FolderModel>)ViewBag.Folders)
+                                {
+                                    <option value="@f.FolderId">@f.FolderName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="ms-3" id="folderList">
+                        @if (ViewBag.Folders != null)
+                        {
+                            foreach (var f in (List<PersonalCloudDrive.Models.FolderModel>)ViewBag.Folders)
+                            {
+                                <span class="badge bg-light text-dark me-2">@f.FolderName <button class="btn btn-sm btn-danger delete-folder-btn" data-folder-id="@f.FolderId">Delete</button></span>
+                            }
+                        }
+                    </div>
+                    <div class="ms-auto d-flex gap-2">
+                        <button id="createFolderBtn" class="btn btn-outline-secondary btn-sm">Create Folder</button>
                         <button id="uploadBtn" class="btn btn-primary">Upload Files</button>
                     </div>
                 </div>
                 <div class="card-body">
-                    @if (ViewBag.RecentFiles != null && ViewBag.RecentFiles.Count > 0)
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>File Name</th>
-                                        <th>Type</th>
-                                        <th>Size</th>
-                                        <th>Uploaded</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var file in ViewBag.RecentFiles)
-                                    {
-                                        <tr data-file-id="@file.FileId">
-                                            <td>@file.FileName</td>
-                                            <td><span class="badge bg-secondary">@file.FileType</span></td>
-                                            <td>@string.Format("{0:0.00} MB", file.FileSize / 1024.0 / 1024.0)</td>
-                                            <td>@file.UploadedOn.ToString("MMM dd, yyyy HH:mm")</td>
-                                            <td>
-                                                <a class="btn btn-sm btn-outline-primary" href="@Url.Action("DownloadFile", "Dashboard", new { id = file.FileId })">Download</a>
-                                                <button class="btn btn-sm btn-outline-danger delete-file-btn" data-file-id="@file.FileId">Delete</button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-4">
-                            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                            <p class="text-muted mt-3">No files uploaded yet. Start by uploading your first file!</p>
-                        </div>
-                    }
+                    <div id="fileTableContainer">
+                        <!-- File table will be loaded here by JS -->
+                    </div>
                     <!-- Hidden upload form (always present) -->
                     <form id="hiddenUploadForm" asp-controller="Dashboard" asp-action="UploadFiles" method="post" enctype="multipart/form-data" style="display:none">
                         @Html.AntiForgeryToken()
                         <input id="fileInput" type="file" name="files" multiple />
+                        <input type="hidden" id="parentFolderId" name="parentFolderId" value="" />
                     </form>
 
 @section Scripts {
@@ -114,6 +97,9 @@
             const uploadBtn = document.getElementById('uploadBtn');
             const fileInput = document.getElementById('fileInput');
             const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            const folderSelect = document.getElementById('folderSelect');
+            const parentFolderInput = document.getElementById('parentFolderId');
+            const createFolderBtn = document.getElementById('createFolderBtn');
 
             uploadBtn?.addEventListener('click', function(e){
                 e.preventDefault();
@@ -127,6 +113,12 @@
                 const formData = new FormData();
                 for (let i = 0; i < files.length; i++) {
                     formData.append('files', files[i]);
+                }
+
+                // include selected parent folder if any
+                const selectedFolder = folderSelect?.value;
+                if (selectedFolder) {
+                    formData.append('parentFolderId', selectedFolder);
                 }
 
                 // add antiforgery token
@@ -168,11 +160,11 @@
                 });
             });
 
-            // Delete file buttons
-            document.querySelectorAll('.delete-file-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+            // Delete file buttons (delegated)
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-file-btn')) {
                     if (!confirm('Are you sure you want to delete this file?')) return;
-                    const fileId = btn.getAttribute('data-file-id');
+                    const fileId = e.target.getAttribute('data-file-id');
                     fetch(`/Dashboard/DeleteFile/${fileId}`, {
                         method: 'POST',
                         headers: {
@@ -182,15 +174,97 @@
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.success) {
-                            btn.closest('tr').remove();
-                            // Optionally update counters or reload
                             location.reload();
                         } else {
                             alert('Delete failed: ' + (data.message || 'Unknown error'));
                         }
                     })
                     .catch(() => alert('Delete failed'));
-                });
+                }
+            });
+            // Delete folder buttons (delegated)
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-folder-btn')) {
+                    if (!confirm('Are you sure you want to delete this folder? All files inside will be deleted!')) return;
+                    const folderId = e.target.getAttribute('data-folder-id');
+                    fetch(`/Dashboard/DeleteFolder/${folderId}`, {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        }
+                    })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            alert('Delete folder failed: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(() => alert('Delete folder failed'));
+                }
+            });
+
+            // Folder selection persistence and file filtering
+            folderSelect?.addEventListener('change', function() {
+                if (parentFolderInput) parentFolderInput.value = folderSelect.value || '';
+                loadFilesForFolder(folderSelect.value);
+            });
+
+            function loadFilesForFolder(folderId) {
+                fetch(`/Dashboard/GetFilesForFolder?folderId=${folderId}`)
+                    .then(resp => resp.json())
+                    .then(data => {
+                        const container = document.getElementById('fileTableContainer');
+                        if (data.files && data.files.length > 0) {
+                            let html = `<div class='table-responsive'><table class='table table-hover'><thead><tr><th>File Name</th><th>Type</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>`;
+                            for (const file of data.files) {
+                                html += `<tr data-file-id='${file.fileId}'>` +
+                                    `<td>${file.fileName}</td>` +
+                                    `<td><span class='badge bg-secondary'>${file.fileType}</span></td>` +
+                                    `<td>${(file.fileSize / 1024.0 / 1024.0).toFixed(2)} MB</td>` +
+                                    `<td>${file.uploadedOn}</td>` +
+                                    `<td><a class='btn btn-sm btn-outline-primary' href='/Dashboard/DownloadFile/${file.fileId}'>Download</a> ` +
+                                    `<button class='btn btn-sm btn-outline-danger delete-file-btn' data-file-id='${file.fileId}'>Delete</button></td>` +
+                                    `</tr>`;
+                            }
+                            html += `</tbody></table></div>`;
+                            container.innerHTML = html;
+                        } else {
+                            container.innerHTML = `<div class='text-center py-4'><i class='bi bi-inbox' style='font-size: 4rem; color: #ccc;'></i><p class='text-muted mt-3'>No files uploaded yet. Start by uploading your first file!</p></div>`;
+                        }
+                    });
+            }
+
+            // Initial load: show files for root (no folder selected)
+            loadFilesForFolder("");
+
+            // Create folder flow
+            createFolderBtn?.addEventListener('click', function(e) {
+                e.preventDefault();
+                const name = prompt('Enter new folder name:');
+                if (!name) return;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                // Send antiforgery token in header; JSON body contains just the folder name
+                fetch('/Dashboard/CreateFolder', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token || ''
+                    },
+                    body: JSON.stringify({ folderName: name })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        // reload to refresh folder list
+                        location.reload();
+                    } else {
+                        alert('Create folder failed: ' + (data.message || 'Unknown'));
+                    }
+                })
+                .catch(() => alert('Create folder failed'));
             });
         })();
     </script>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PersonalCloudDrive.Data;
 using PersonalCloudDrive.Models;
+using PersonalCloudDrive.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace PersonalCloudDrive.Controllers
@@ -21,12 +22,38 @@ namespace PersonalCloudDrive.Controllers
             _userManager = userManager;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetFilesForFolder(int? folderId)
+        {
+            var userId = _userManager.GetUserId(User);
+            var filesQuery = _context.Files.Where(f => f.UserId == userId && !f.IsDeleted);
+            if (folderId.HasValue && folderId.Value > 0)
+            {
+                filesQuery = filesQuery.Where(f => f.ParentFolderId == folderId.Value);
+            }
+            else
+            {
+                // Only show files not in any folder (root)
+                filesQuery = filesQuery.Where(f => f.ParentFolderId == null);
+            }
+            var files = await filesQuery.OrderByDescending(f => f.UploadedOn).Take(50).ToListAsync();
+            var result = files.Select(f => new {
+                fileId = f.FileId,
+                fileName = f.FileName,
+                fileType = f.FileType,
+                fileSize = f.FileSize,
+                uploadedOn = f.UploadedOn.ToString("MMM dd, yyyy HH:mm")
+            });
+            return Json(new { files = result });
+        }
+
+        // ...existing methods...
+
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
             var user = await _userManager.FindByIdAsync(userId);
 
-            // Get user statistics
             var totalFiles = await _context.Files
                 .Where(f => f.UserId == userId && !f.IsDeleted)
                 .CountAsync();
@@ -55,7 +82,14 @@ namespace PersonalCloudDrive.Controllers
                 await _userManager.UpdateAsync(user);
             }
 
+            // also return user's folders for folder selection / creation
+            var folders = await _context.Folders
+                .Where(f => f.UserId == userId && !f.IsDeleted)
+                .OrderBy(f => f.FolderName)
+                .ToListAsync();
+
             ViewBag.User = user;
+            ViewBag.Folders = folders;
             ViewBag.TotalFiles = totalFiles;
             ViewBag.TotalFolders = totalFolders;
             ViewBag.RecentFiles = recentFiles;
@@ -68,7 +102,7 @@ namespace PersonalCloudDrive.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UploadFiles(List<IFormFile> files)
+        public async Task<IActionResult> UploadFiles(List<IFormFile> files, int? parentFolderId)
         {
             if (files == null || files.Count == 0)
             {
@@ -104,6 +138,7 @@ namespace PersonalCloudDrive.Controllers
                         FilePath = $"/uploads/{userId}/{uniqueName}",
                         FileType = Path.GetExtension(safeFileName)?.TrimStart('.') ?? "",
                         FileSize = file.Length,
+                        ParentFolderId = parentFolderId,
                         UploadedOn = DateTime.Now
                     };
 
@@ -140,6 +175,29 @@ namespace PersonalCloudDrive.Controllers
                 return StatusCode(500, new { message = ex.Message });
             }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateFolder([FromBody] CreateFolderRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.FolderName))
+                return BadRequest(new { success = false, message = "Folder name is required" });
+
+            var userId = _userManager.GetUserId(User);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return Unauthorized();
+
+            var folder = new FolderModel
+            {
+                FolderName = request.FolderName.Trim(),
+                UserId = userId,
+                CreatedOn = DateTime.Now
+            };
+            _context.Folders.Add(folder);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, folderId = folder.FolderId, folderName = folder.FolderName });
+        }
         [HttpGet]
         public async Task<IActionResult> DownloadFile(int id)
         {
@@ -171,6 +229,36 @@ namespace PersonalCloudDrive.Controllers
             {
                 user.StorageUsed = Math.Max(0, user.StorageUsed - file.FileSize);
                 await _userManager.UpdateAsync(user);
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFolder(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderId == id && f.UserId == userId && !f.IsDeleted);
+            if (folder == null)
+                return Json(new { success = false, message = "Folder not found" });
+
+            folder.IsDeleted = true;
+            folder.DeletedOn = DateTime.Now;
+
+            // Soft delete all files in this folder
+            var files = await _context.Files.Where(f => f.ParentFolderId == id && f.UserId == userId && !f.IsDeleted).ToListAsync();
+            foreach (var file in files)
+            {
+                file.IsDeleted = true;
+                file.DeletedOn = DateTime.Now;
+                // Update user's storage used
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user != null)
+                {
+                    user.StorageUsed = Math.Max(0, user.StorageUsed - file.FileSize);
+                    await _userManager.UpdateAsync(user);
+                }
             }
 
             await _context.SaveChangesAsync();
