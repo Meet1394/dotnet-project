@@ -27,24 +27,38 @@ namespace PersonalCloudDrive.Controllers
         {
             var userId = _userManager.GetUserId(User);
             var filesQuery = _context.Files.Where(f => f.UserId == userId && !f.IsDeleted);
+            var foldersQuery = _context.Folders.Where(f => f.UserId == userId && !f.IsDeleted);
+            
             if (folderId.HasValue && folderId.Value > 0)
             {
                 filesQuery = filesQuery.Where(f => f.ParentFolderId == folderId.Value);
+                foldersQuery = foldersQuery.Where(f => f.ParentFolderId == folderId.Value);
             }
             else
             {
-                // Only show files not in any folder (root)
+                // Only show files and folders not in any parent folder (root)
                 filesQuery = filesQuery.Where(f => f.ParentFolderId == null);
+                foldersQuery = foldersQuery.Where(f => f.ParentFolderId == null);
             }
+            
             var files = await filesQuery.OrderByDescending(f => f.UploadedOn).Take(50).ToListAsync();
-            var result = files.Select(f => new {
+            var folders = await foldersQuery.OrderBy(f => f.FolderName).ToListAsync();
+            
+            var fileResult = files.Select(f => new {
                 fileId = f.FileId,
                 fileName = f.FileName,
                 fileType = f.FileType,
                 fileSize = f.FileSize,
                 uploadedOn = f.UploadedOn.ToString("MMM dd, yyyy HH:mm")
             });
-            return Json(new { files = result });
+            
+            var folderResult = folders.Select(f => new {
+                folderId = f.FolderId,
+                folderName = f.FolderName,
+                createdOn = f.CreatedOn.ToString("MMM dd, yyyy HH:mm")
+            });
+            
+            return Json(new { files = fileResult, folders = folderResult });
         }
 
         // ...existing methods...
@@ -191,6 +205,7 @@ namespace PersonalCloudDrive.Controllers
             {
                 FolderName = request.FolderName.Trim(),
                 UserId = userId,
+                ParentFolderId = request.ParentFolderId,
                 CreatedOn = DateTime.Now
             };
             _context.Folders.Add(folder);

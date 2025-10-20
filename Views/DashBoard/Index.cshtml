@@ -3,25 +3,32 @@
     var user = ViewBag.User as PersonalCloudDrive.Models.ApplicationUser;
     var storageUsedPercentage = ViewBag.StorageUsedPercentage;
 }
+
+<div class="dashboard-container">
+    <div class="row mb-4">
         <div class="col">
-            <h2>@user.Email</h2>
+            <h2><i class="fas fa-user me-2"></i>@user.Email</h2>
         </div>
     </div>
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white shadow">
+            <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title">Total Files</h5>
+                    <h5 class="card-title">
+                        <i class="fas fa-file me-2"></i>Total Files
+                    </h5>
                     <h2 id="totalFilesCount">@ViewBag.TotalFiles</h2>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white shadow">
+            <div class="card stats-card">
                 <div class="card-body">
-                    <h5 class="card-title">Total Folders</h5>
+                    <h5 class="card-title">
+                        <i class="fas fa-folder me-2"></i>Total Folders
+                    </h5>
                     <h2 id="totalFoldersCount">@ViewBag.TotalFolders</h2>
                 </div>
             </div>
@@ -29,13 +36,15 @@
         <div class="col-md-6">
             <div class="card shadow">
                 <div class="card-body">
-                    <h5 class="card-title">Storage Used</h5>
-                    <div class="progress" style="height: 25px;">
-                    <div id="storageProgressBar" class="progress-bar bg-info" role="progressbar" 
-                        style="width: @(storageUsedPercentage)%;" 
-                        aria-valuenow="@storageUsedPercentage" 
-                        aria-valuemin="0" 
-                        aria-valuemax="100">
+                    <h5 class="card-title">
+                        <i class="fas fa-hdd me-2"></i>Storage Used
+                    </h5>
+                    <div class="progress">
+                        <div id="storageProgressBar" class="progress-bar" role="progressbar" 
+                            style="width: @(storageUsedPercentage)%;" 
+                            aria-valuenow="@storageUsedPercentage" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100">
                             @string.Format("{0:0.00}%", storageUsedPercentage)
                         </div>
                     </div>
@@ -52,32 +61,25 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header bg-white d-flex align-items-center">
-                    <h5 class="mb-0">Recent Files</h5>
-                    <div class="ms-3">
-                        <select id="folderSelect" class="form-select form-select-sm">
-                            <option value="">Root</option>
-                            @if (ViewBag.Folders != null)
-                            {
-                                foreach (var f in (List<PersonalCloudDrive.Models.FolderModel>)ViewBag.Folders)
-                                {
-                                    <option value="@f.FolderId">@f.FolderName</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                    <div class="ms-3" id="folderList">
-                        @if (ViewBag.Folders != null)
-                        {
-                            foreach (var f in (List<PersonalCloudDrive.Models.FolderModel>)ViewBag.Folders)
-                            {
-                                <span class="badge bg-light text-dark me-2">@f.FolderName <button class="btn btn-sm btn-danger delete-folder-btn" data-folder-id="@f.FolderId">Delete</button></span>
-                            }
-                        }
+                <div class="card-header bg-gradient-primary text-white d-flex align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-folder-open me-2"></i>
+                        <h5 class="mb-0 me-3">File Manager</h5>
+                        <div class="breadcrumb-container">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb mb-0" id="breadcrumb">
+                                    <li class="breadcrumb-item active">Root</li>
+                                </ol>
+                            </nav>
+                        </div>
                     </div>
                     <div class="ms-auto d-flex gap-2">
-                        <button id="createFolderBtn" class="btn btn-outline-secondary btn-sm">Create Folder</button>
-                        <button id="uploadBtn" class="btn btn-primary">Upload Files</button>
+                        <button id="createFolderBtn" class="btn btn-light btn-sm">
+                            <i class="fas fa-folder-plus me-1"></i>Create Folder
+                        </button>
+                        <button id="uploadBtn" class="btn btn-warning btn-sm">
+                            <i class="fas fa-upload me-1"></i>Upload Files
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -97,9 +99,11 @@
             const uploadBtn = document.getElementById('uploadBtn');
             const fileInput = document.getElementById('fileInput');
             const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-            const folderSelect = document.getElementById('folderSelect');
             const parentFolderInput = document.getElementById('parentFolderId');
             const createFolderBtn = document.getElementById('createFolderBtn');
+            
+            // Track current folder context
+            let currentFolderId = '';
 
             uploadBtn?.addEventListener('click', function(e){
                 e.preventDefault();
@@ -115,10 +119,9 @@
                     formData.append('files', files[i]);
                 }
 
-                // include selected parent folder if any
-                const selectedFolder = folderSelect?.value;
-                if (selectedFolder) {
-                    formData.append('parentFolderId', selectedFolder);
+                // Use current folder context for upload
+                if (currentFolderId) {
+                    formData.append('parentFolderId', currentFolderId);
                 }
 
                 // add antiforgery token
@@ -182,11 +185,21 @@
                     .catch(() => alert('Delete failed'));
                 }
             });
+            // Enter folder buttons (delegated)
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('enter-folder-btn') || e.target.closest('.enter-folder-btn')) {
+                    const button = e.target.classList.contains('enter-folder-btn') ? e.target : e.target.closest('.enter-folder-btn');
+                    const folderId = button.getAttribute('data-folder-id');
+                    loadFilesForFolder(folderId);
+                }
+            });
+
             // Delete folder buttons (delegated)
             document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('delete-folder-btn')) {
+                if (e.target.classList.contains('delete-folder-btn') || e.target.closest('.delete-folder-btn')) {
                     if (!confirm('Are you sure you want to delete this folder? All files inside will be deleted!')) return;
-                    const folderId = e.target.getAttribute('data-folder-id');
+                    const button = e.target.classList.contains('delete-folder-btn') ? e.target : e.target.closest('.delete-folder-btn');
+                    const folderId = button.getAttribute('data-folder-id');
                     fetch(`/Dashboard/DeleteFolder/${folderId}`, {
                         method: 'POST',
                         headers: {
@@ -205,35 +218,154 @@
                 }
             });
 
-            // Folder selection persistence and file filtering
-            folderSelect?.addEventListener('change', function() {
-                if (parentFolderInput) parentFolderInput.value = folderSelect.value || '';
-                loadFilesForFolder(folderSelect.value);
-            });
+            // Folder navigation is now handled by enter-folder-btn clicks
 
             function loadFilesForFolder(folderId) {
+                // Update current folder context
+                currentFolderId = folderId || '';
+                
                 fetch(`/Dashboard/GetFilesForFolder?folderId=${folderId}`)
                     .then(resp => resp.json())
                     .then(data => {
                         const container = document.getElementById('fileTableContainer');
-                        if (data.files && data.files.length > 0) {
-                            let html = `<div class='table-responsive'><table class='table table-hover'><thead><tr><th>File Name</th><th>Type</th><th>Size</th><th>Uploaded</th><th>Actions</th></tr></thead><tbody>`;
-                            for (const file of data.files) {
-                                html += `<tr data-file-id='${file.fileId}'>` +
-                                    `<td>${file.fileName}</td>` +
-                                    `<td><span class='badge bg-secondary'>${file.fileType}</span></td>` +
-                                    `<td>${(file.fileSize / 1024.0 / 1024.0).toFixed(2)} MB</td>` +
-                                    `<td>${file.uploadedOn}</td>` +
-                                    `<td><a class='btn btn-sm btn-outline-primary' href='/Dashboard/DownloadFile/${file.fileId}'>Download</a> ` +
-                                    `<button class='btn btn-sm btn-outline-danger delete-file-btn' data-file-id='${file.fileId}'>Delete</button></td>` +
-                                    `</tr>`;
+                        const breadcrumb = document.getElementById('breadcrumb');
+                        
+                        // Update breadcrumb
+                        if (folderId && folderId !== '') {
+                            breadcrumb.innerHTML = `
+                                <li class="breadcrumb-item">
+                                    <a href="#" onclick="loadFilesForFolder('')" class="text-white-50">
+                                        <i class="fas fa-home me-1"></i>Root
+                                    </a>
+                                </li>
+                                <li class="breadcrumb-item active">
+                                    <i class="fas fa-folder me-1"></i>Current Folder
+                                </li>
+                            `;
+                        } else {
+                            breadcrumb.innerHTML = `
+                                <li class="breadcrumb-item active">
+                                    <i class="fas fa-home me-1"></i>Root
+                                </li>
+                            `;
+                        }
+                        
+                        if ((data.files && data.files.length > 0) || (data.folders && data.folders.length > 0)) {
+                            let html = `
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-striped">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th><i class="fas fa-file me-1"></i>Name</th>
+                                                <th><i class="fas fa-tag me-1"></i>Type</th>
+                                                <th><i class="fas fa-weight-hanging me-1"></i>Size</th>
+                                                <th><i class="fas fa-calendar me-1"></i>Date</th>
+                                                <th><i class="fas fa-cogs me-1"></i>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>`;
+                            
+                            // Add folders first
+                            if (data.folders && data.folders.length > 0) {
+                                for (const folder of data.folders) {
+                                    html += `
+                                        <tr data-folder-id='${folder.folderId}' class="folder-row">
+                                            <td class="align-middle">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-folder me-2 text-warning"></i>
+                                                    <span class="fw-medium">${folder.folderName}</span>
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="badge bg-warning">FOLDER</span>
+                                            </td>
+                                            <td class="align-middle text-muted">-</td>
+                                            <td class="align-middle text-muted">${folder.createdOn}</td>
+                                            <td class="align-middle">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <button class="btn btn-outline-primary enter-folder-btn" data-folder-id='${folder.folderId}' title="Open Folder">
+                                                        <i class="fas fa-folder-open"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger delete-folder-btn" data-folder-id='${folder.folderId}' title="Delete Folder">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>`;
+                                }
+                            }
+                            
+                            // Add files
+                            if (data.files && data.files.length > 0) {
+                                for (const file of data.files) {
+                                    const fileIcon = getFileIcon(file.fileType);
+                                    const fileSize = formatFileSize(file.fileSize);
+                                    
+                                    html += `
+                                        <tr data-file-id='${file.fileId}' class="file-row">
+                                            <td class="align-middle">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="${fileIcon} me-2 text-primary"></i>
+                                                    <span class="fw-medium">${file.fileName}</span>
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="badge bg-info">${file.fileType.toUpperCase()}</span>
+                                            </td>
+                                            <td class="align-middle text-muted">${fileSize}</td>
+                                            <td class="align-middle text-muted">${file.uploadedOn}</td>
+                                            <td class="align-middle">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a class="btn btn-outline-primary" href='/Dashboard/DownloadFile/${file.fileId}' title="Download">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                    <button class="btn btn-outline-danger delete-file-btn" data-file-id='${file.fileId}' title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>`;
+                                }
                             }
                             html += `</tbody></table></div>`;
                             container.innerHTML = html;
                         } else {
-                            container.innerHTML = `<div class='text-center py-4'><i class='bi bi-inbox' style='font-size: 4rem; color: #ccc;'></i><p class='text-muted mt-3'>No files uploaded yet. Start by uploading your first file!</p></div>`;
+                            const emptyIcon = folderId && folderId !== '' ? 'fas fa-folder-open' : 'fas fa-inbox';
+                            const emptyMessage = folderId && folderId !== '' 
+                                ? 'This folder is empty. Upload some files or create subfolders!'
+                                : 'No files uploaded yet. Start by uploading your first file!';
+                                
+                            container.innerHTML = `
+                                <div class="text-center py-5">
+                                    <div class="empty-state">
+                                        <i class="${emptyIcon} text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+                                        <h4 class="text-muted mt-3 mb-2">${emptyMessage}</h4>
+                                        <p class="text-muted">Drag and drop files here or use the upload button above</p>
+                                    </div>
+                                </div>`;
                         }
                     });
+            }
+            
+            function getFileIcon(fileType) {
+                const type = fileType.toLowerCase();
+                if (type.includes('pdf')) return 'fas fa-file-pdf text-danger';
+                if (type.includes('doc') || type.includes('docx')) return 'fas fa-file-word text-primary';
+                if (type.includes('xls') || type.includes('xlsx')) return 'fas fa-file-excel text-success';
+                if (type.includes('ppt') || type.includes('pptx')) return 'fas fa-file-powerpoint text-warning';
+                if (type.includes('jpg') || type.includes('jpeg') || type.includes('png') || type.includes('gif')) return 'fas fa-file-image text-info';
+                if (type.includes('mp4') || type.includes('avi') || type.includes('mov')) return 'fas fa-file-video text-purple';
+                if (type.includes('mp3') || type.includes('wav') || type.includes('flac')) return 'fas fa-file-audio text-success';
+                if (type.includes('zip') || type.includes('rar') || type.includes('7z')) return 'fas fa-file-archive text-warning';
+                return 'fas fa-file text-secondary';
+            }
+            
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
 
             // Initial load: show files for root (no folder selected)
@@ -245,7 +377,13 @@
                 const name = prompt('Enter new folder name:');
                 if (!name) return;
                 const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-                // Send antiforgery token in header; JSON body contains just the folder name
+                
+                // Create folder in current context
+                const folderData = { 
+                    folderName: name,
+                    parentFolderId: currentFolderId || null
+                };
+                
                 fetch('/Dashboard/CreateFolder', {
                     method: 'POST',
                     credentials: 'same-origin',
@@ -253,13 +391,13 @@
                         'Content-Type': 'application/json',
                         'RequestVerificationToken': token || ''
                     },
-                    body: JSON.stringify({ folderName: name })
+                    body: JSON.stringify(folderData)
                 })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        // reload to refresh folder list
-                        location.reload();
+                        // Reload current folder view instead of full page reload
+                        loadFilesForFolder(currentFolderId);
                     } else {
                         alert('Create folder failed: ' + (data.message || 'Unknown'));
                     }
@@ -273,4 +411,5 @@
             </div>
         </div>
     </div>
+</div>
 </div>
