@@ -147,8 +147,8 @@
                         const usedMB = (data.storageUsed / 1024.0 / 1024.0).toFixed(2);
                         const limitMB = (data.storageLimit / 1024.0 / 1024.0).toFixed(2);
                         document.getElementById('storageText').textContent = usedMB + ' MB of ' + limitMB + ' MB';
-                        // optionally reload recent files or the page
-                        location.reload();
+                        // Reload current folder view instead of full page reload
+                        loadFilesForFolder(currentFolderId);
                     } else {
                         alert('Upload failed');
                     }
@@ -177,7 +177,8 @@
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.success) {
-                            location.reload();
+                            // Reload current folder view instead of full page reload
+                            loadFilesForFolder(currentFolderId);
                         } else {
                             alert('Delete failed: ' + (data.message || 'Unknown error'));
                         }
@@ -209,7 +210,8 @@
                     .then(resp => resp.json())
                     .then(data => {
                         if (data.success) {
-                            location.reload();
+                            // Reload current folder view instead of full page reload
+                            loadFilesForFolder(currentFolderId);
                         } else {
                             alert('Delete folder failed: ' + (data.message || 'Unknown error'));
                         }
