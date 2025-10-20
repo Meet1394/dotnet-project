@@ -3,9 +3,6 @@
     var user = ViewBag.User as PersonalCloudDrive.Models.ApplicationUser;
     var storageUsedPercentage = ViewBag.StorageUsedPercentage;
 }
-
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
         <div class="col">
             <h2>Welcome, @user.Email!</h2>
         </div>
@@ -26,68 +23,6 @@
                 </div>
             </div>
         </div>
-                @section Scripts {
-                    <script>
-                        (function(){
-                            const uploadBtn = document.getElementById('uploadBtn');
-                            const fileInput = document.getElementById('fileInput');
-                            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
-
-                            uploadBtn?.addEventListener('click', function(e){
-                                e.preventDefault();
-                                fileInput?.click();
-                            });
-
-                            fileInput?.addEventListener('change', function(e){
-                                const files = fileInput.files;
-                                if (!files || files.length === 0) return;
-
-                                const formData = new FormData();
-                                for (let i = 0; i < files.length; i++) {
-                                    formData.append('files', files[i]);
-                                }
-
-                                // add antiforgery token
-                                if (antiforgeryToken) formData.append('__RequestVerificationToken', antiforgeryToken);
-
-                                fetch('/Dashboard/UploadFiles', {
-                                    method: 'POST',
-                                    body: formData
-                                })
-                                .then(resp => {
-                                    if (!resp.ok) throw resp;
-                                    return resp.json();
-                                })
-                                .then(data => {
-                                    if (data.success) {
-                                        document.getElementById('totalFilesCount').textContent = data.totalFiles;
-                                        document.getElementById('totalFoldersCount').textContent = data.totalFolders;
-                                        const pct = parseFloat(data.storageUsedPercentage) || 0;
-                                        const progressBar = document.getElementById('storageProgressBar');
-                                        progressBar.style.width = pct + '%';
-                                        progressBar.setAttribute('aria-valuenow', pct);
-                                        progressBar.textContent = pct.toFixed(2) + '%';
-                                        const usedMB = (data.storageUsed / 1024.0 / 1024.0).toFixed(2);
-                                        const limitMB = (data.storageLimit / 1024.0 / 1024.0).toFixed(2);
-                                        document.getElementById('storageText').textContent = usedMB + ' MB of ' + limitMB + ' MB';
-                                        // optionally reload recent files or the page
-                                        location.reload();
-                                    } else {
-                                        alert('Upload failed');
-                                    }
-                                })
-                                .catch(async err => {
-                                    try {
-                                        const json = await err.json();
-                                        alert('Upload error: ' + (json.message || err.statusText));
-                                    } catch(e) {
-                                        alert('Upload error');
-                                    }
-                                });
-                            });
-                        })();
-                    </script>
-                }
         <div class="col-md-3">
             <div class="card bg-success text-white shadow">
                 <div class="card-body">
@@ -100,12 +35,12 @@
             <div class="card shadow">
                 <div class="card-body">
                     <h5 class="card-title">Storage Used</h5>
-                        <div class="progress" style="height: 25px;">
-                        <div id="storageProgressBar" class="progress-bar bg-info" role="progressbar" 
-                             style="width: @storageUsedPercentage;%" 
-                             aria-valuenow="@storageUsedPercentage" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
+                    <div class="progress" style="height: 25px;">
+                    <div id="storageProgressBar" class="progress-bar bg-info" role="progressbar" 
+                        style="width: @(storageUsedPercentage)%;" 
+                        aria-valuenow="@storageUsedPercentage" 
+                        aria-valuemin="0" 
+                        aria-valuemax="100">
                             @string.Format("{0:0.00}%", storageUsedPercentage)
                         </div>
                     </div>
@@ -122,8 +57,11 @@
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex align-items-center">
                     <h5 class="mb-0">Recent Files</h5>
+                    <div class="ms-auto">
+                        <button id="uploadBtn" class="btn btn-primary">Upload Files</button>
+                    </div>
                 </div>
                 <div class="card-body">
                     @if (ViewBag.RecentFiles != null && ViewBag.RecentFiles.Count > 0)
@@ -136,16 +74,21 @@
                                         <th>Type</th>
                                         <th>Size</th>
                                         <th>Uploaded</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var file in ViewBag.RecentFiles)
                                     {
-                                        <tr>
+                                        <tr data-file-id="@file.FileId">
                                             <td>@file.FileName</td>
                                             <td><span class="badge bg-secondary">@file.FileType</span></td>
                                             <td>@string.Format("{0:0.00} MB", file.FileSize / 1024.0 / 1024.0)</td>
                                             <td>@file.UploadedOn.ToString("MMM dd, yyyy HH:mm")</td>
+                                            <td>
+                                                <a class="btn btn-sm btn-outline-primary" href="@Url.Action("DownloadFile", "Dashboard", new { id = file.FileId })">Download</a>
+                                                <button class="btn btn-sm btn-outline-danger delete-file-btn" data-file-id="@file.FileId">Delete</button>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -154,16 +97,104 @@
                     }
                     else
                     {
-                        <div class="text-center py-5">
+                        <div class="text-center py-4">
                             <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
                             <p class="text-muted mt-3">No files uploaded yet. Start by uploading your first file!</p>
-                            <button id="uploadBtn" class="btn btn-primary">Upload Files</button>
-                            <form id="hiddenUploadForm" asp-controller="Dashboard" asp-action="UploadFiles" method="post" enctype="multipart/form-data" style="display:none">
-                                @Html.AntiForgeryToken()
-                                <input id="fileInput" type="file" name="files" multiple />
-                            </form>
                         </div>
                     }
+                    <!-- Hidden upload form (always present) -->
+                    <form id="hiddenUploadForm" asp-controller="Dashboard" asp-action="UploadFiles" method="post" enctype="multipart/form-data" style="display:none">
+                        @Html.AntiForgeryToken()
+                        <input id="fileInput" type="file" name="files" multiple />
+                    </form>
+
+@section Scripts {
+    <script>
+        (function(){
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileInput = document.getElementById('fileInput');
+            const antiforgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            uploadBtn?.addEventListener('click', function(e){
+                e.preventDefault();
+                fileInput?.click();
+            });
+
+            fileInput?.addEventListener('change', function(e){
+                const files = fileInput.files;
+                if (!files || files.length === 0) return;
+
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+
+                // add antiforgery token
+                if (antiforgeryToken) formData.append('__RequestVerificationToken', antiforgeryToken);
+
+                fetch('/Dashboard/UploadFiles', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(resp => {
+                    if (!resp.ok) throw resp;
+                    return resp.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('totalFilesCount').textContent = data.totalFiles;
+                        document.getElementById('totalFoldersCount').textContent = data.totalFolders;
+                        const pct = parseFloat(data.storageUsedPercentage) || 0;
+                        const progressBar = document.getElementById('storageProgressBar');
+                        progressBar.style.width = pct + '%';
+                        progressBar.setAttribute('aria-valuenow', pct);
+                        progressBar.textContent = pct.toFixed(2) + '%';
+                        const usedMB = (data.storageUsed / 1024.0 / 1024.0).toFixed(2);
+                        const limitMB = (data.storageLimit / 1024.0 / 1024.0).toFixed(2);
+                        document.getElementById('storageText').textContent = usedMB + ' MB of ' + limitMB + ' MB';
+                        // optionally reload recent files or the page
+                        location.reload();
+                    } else {
+                        alert('Upload failed');
+                    }
+                })
+                .catch(async err => {
+                    try {
+                        const json = await err.json();
+                        alert('Upload error: ' + (json.message || err.statusText));
+                    } catch(e) {
+                        alert('Upload error');
+                    }
+                });
+            });
+
+            // Delete file buttons
+            document.querySelectorAll('.delete-file-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    if (!confirm('Are you sure you want to delete this file?')) return;
+                    const fileId = btn.getAttribute('data-file-id');
+                    fetch(`/Dashboard/DeleteFile/${fileId}`, {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        }
+                    })
+                    .then(resp => resp.json())
+                    .then(data => {
+                        if (data.success) {
+                            btn.closest('tr').remove();
+                            // Optionally update counters or reload
+                            location.reload();
+                        } else {
+                            alert('Delete failed: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(() => alert('Delete failed'));
+                });
+            });
+        })();
+    </script>
+}
                 </div>
             </div>
         </div>

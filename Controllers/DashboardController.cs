@@ -41,11 +41,27 @@ namespace PersonalCloudDrive.Controllers
                 .Take(10)
                 .ToListAsync();
 
+            // Ensure StorageUsed is in sync with actual stored files in the database.
+            // This prevents showing a non-zero default when no files exist.
+            var dbStorageUsed = await _context.Files
+                .Where(f => f.UserId == userId && !f.IsDeleted)
+                .Select(f => (long?)f.FileSize)
+                .SumAsync() ?? 0L;
+
+            if (user != null && user.StorageUsed != dbStorageUsed)
+            {
+                user.StorageUsed = dbStorageUsed;
+                // update the user record to persist corrected storage
+                await _userManager.UpdateAsync(user);
+            }
+
             ViewBag.User = user;
             ViewBag.TotalFiles = totalFiles;
             ViewBag.TotalFolders = totalFolders;
             ViewBag.RecentFiles = recentFiles;
-            ViewBag.StorageUsedPercentage = (user.StorageUsed * 100.0 / user.StorageLimit);
+            ViewBag.StorageUsedPercentage = (user != null && user.StorageLimit > 0)
+                ? (user.StorageUsed * 100.0 / user.StorageLimit)
+                : 0.0;
 
             return View();
         }
@@ -123,6 +139,42 @@ namespace PersonalCloudDrive.Controllers
             {
                 return StatusCode(500, new { message = ex.Message });
             }
+        }
+        [HttpGet]
+        public async Task<IActionResult> DownloadFile(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var file = await _context.Files.FirstOrDefaultAsync(f => f.FileId == id && f.UserId == userId && !f.IsDeleted);
+            if (file == null)
+                return NotFound();
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", file.FilePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (!System.IO.File.Exists(filePath))
+                return NotFound();
+            var contentType = "application/octet-stream";
+            return PhysicalFile(filePath, contentType, file.FileName);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteFile(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            var file = await _context.Files.FirstOrDefaultAsync(f => f.FileId == id && f.UserId == userId && !f.IsDeleted);
+            if (file == null)
+                return Json(new { success = false, message = "File not found" });
+            file.IsDeleted = true;
+            file.DeletedOn = DateTime.Now;
+
+            // Subtract file size from user's storage used (ensure non-negative)
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user != null)
+            {
+                user.StorageUsed = Math.Max(0, user.StorageUsed - file.FileSize);
+                await _userManager.UpdateAsync(user);
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
         }
     }
 }

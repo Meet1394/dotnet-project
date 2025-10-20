@@ -64,6 +64,8 @@ dotnet run
 
 Open a browser at https://localhost:5001 (or as printed in output) and register/login.
 
+**Note:** You must register a new user account and log in before you can access the Dashboard and upload files.
+
 ## Uploads
 
 Files uploaded are saved under `wwwroot/uploads/{userId}` by default. Upload path and limits are configured in `appsettings.json` under `StorageSettings`.
@@ -98,6 +100,11 @@ git push -u origin main
 - If `dotnet run` fails because the output file is locked, stop any running instance of the app (close the terminal or stop the process), then run again.
 - If you change `appsettings.json`, remember to re-run the app so the new configuration is picked up.
 - For production deployment, configure a proper SQL Server, storage location, and secure secrets (do not keep production connection strings in plaintext in `appsettings.json`).
+
+- If you see errors about missing `dotnet-ef`, install it with `dotnet tool install --global dotnet-ef`.
+- If you get port conflicts, change the port in `Properties/launchSettings.json` or use the `--urls` option: `dotnet run --urls "https://localhost:5002"`
+- If migrations fail, check your connection string and SQL Server installation.
+- If you see "green files" in `git status`, commit and push them to update GitHub.
 
 ---
 
