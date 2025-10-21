@@ -7,7 +7,7 @@
 <div class="dashboard-container">
     <div class="row mb-4">
         <div class="col">
-            <h2><i class="fas fa-user me-2"></i>@user.Email</h2>
+            <h2><i class="fas fa-user me-2"></i>@(user?.Email ?? "User")</h2>
         </div>
     </div>
 
@@ -49,8 +49,8 @@
                         </div>
                     </div>
                     <small id="storageText" class="text-muted">
-                        @string.Format("{0:0.00} MB", user.StorageUsed / 1024.0 / 1024.0) of 
-                        @string.Format("{0:0.00} MB", user.StorageLimit / 1024.0 / 1024.0)
+                        @string.Format("{0:0.00} MB", (user?.StorageUsed ?? 0) / 1024.0 / 1024.0) of 
+                        @string.Format("{0:0.00} MB", (user?.StorageLimit ?? 0) / 1024.0 / 1024.0)
                     </small>
                 </div>
             </div>

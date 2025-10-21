@@ -25,7 +25,7 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
-                        @if (User.Identity.IsAuthenticated)
+                        @if (User?.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-area="" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
@@ -33,7 +33,7 @@
                         }
                     </ul>
                     <ul class="navbar-nav">
-                        @if (User.Identity.IsAuthenticated)
+                        @if (User?.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
                                 <span class="nav-link text-dark">@User.Identity.Name</span>
@@ -67,6 +67,7 @@
 
         <footer class="footer">
             <div class="container">
+                @{ var isAuth = User?.Identity?.IsAuthenticated == true; }
                 <div class="row g-4 py-4">
                     <div class="col-12 col-md-4 mb-4 mb-md-0">
                         <h5 class="text-white mb-3">
@@ -85,7 +86,7 @@
                             <li class="mb-2">
                                 <a asp-controller="Home" asp-action="Privacy" class="footer-link">Privacy Policy</a>
                             </li>
-                            @if (User.Identity?.IsAuthenticated == true)
+                            @if (isAuth)
                             {
                                 <li class="mb-2">
                                     <a asp-controller="Dashboard" asp-action="Index" class="footer-link">Dashboard</a>

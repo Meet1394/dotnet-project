@@ -26,6 +26,7 @@ namespace PersonalCloudDrive.Controllers
         public async Task<IActionResult> GetFilesForFolder(int? folderId)
         {
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var filesQuery = _context.Files.Where(f => f.UserId == userId && !f.IsDeleted);
             var foldersQuery = _context.Folders.Where(f => f.UserId == userId && !f.IsDeleted);
             
@@ -66,6 +67,7 @@ namespace PersonalCloudDrive.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var user = await _userManager.FindByIdAsync(userId);
 
             var totalFiles = await _context.Files
@@ -124,6 +126,7 @@ namespace PersonalCloudDrive.Controllers
             }
 
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return Unauthorized();
 
@@ -198,6 +201,7 @@ namespace PersonalCloudDrive.Controllers
                 return BadRequest(new { success = false, message = "Folder name is required" });
 
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return Unauthorized();
 
@@ -217,6 +221,7 @@ namespace PersonalCloudDrive.Controllers
         public async Task<IActionResult> DownloadFile(int id)
         {
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var file = await _context.Files.FirstOrDefaultAsync(f => f.FileId == id && f.UserId == userId && !f.IsDeleted);
             if (file == null)
                 return NotFound();
@@ -232,6 +237,7 @@ namespace PersonalCloudDrive.Controllers
         public async Task<IActionResult> DeleteFile(int id)
         {
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var file = await _context.Files.FirstOrDefaultAsync(f => f.FileId == id && f.UserId == userId && !f.IsDeleted);
             if (file == null)
                 return Json(new { success = false, message = "File not found" });
@@ -254,6 +260,7 @@ namespace PersonalCloudDrive.Controllers
         public async Task<IActionResult> DeleteFolder(int id)
         {
             var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
             var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderId == id && f.UserId == userId && !f.IsDeleted);
             if (folder == null)
                 return Json(new { success = false, message = "Folder not found" });
