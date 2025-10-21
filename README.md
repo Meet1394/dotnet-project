@@ -240,13 +240,13 @@ Made with ❤️ using ASP.NET Core
 Here are screenshots from the running application. They help new users see how the app looks and behaves.
 
 ### Dashboard
-(https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/dashboard.png)
+![Image Alt](https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/dashboard.png)
 
 ### Register Page
-(https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/Register%20Page%20.png)
+![Image Alt](https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/Register%20Page%20.png)
 
 ### Sign In Page
-(https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/Sign%20In%20Page.png)
+![Image Alt](https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/Sign%20In%20Page.png)
 
 ### Storage View
-(https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/Storage%20Page.png)
+![Image Alt](https://github.com/Meet1394/dotnet-project/blob/bc0abf652898c469383e0c97121db22fcce42a29/screenshots/Storage%20Page.png)
