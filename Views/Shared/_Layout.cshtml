@@ -58,17 +58,69 @@
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
+    <div class="page-content">
         <div class="container">
-            &copy; 2025 - PersonalCloudDrive - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
         </div>
-    </footer>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="row g-4 py-4">
+                    <div class="col-12 col-md-4 mb-4 mb-md-0">
+                        <h5 class="text-white mb-3">
+                            <i class="bi bi-cloud"></i> PersonalCloudDrive
+                        </h5>
+                        <p class="text-white-50 mb-0">
+                            Your secure personal cloud storage solution. Upload, manage, and share your files with confidence.
+                        </p>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <h6 class="text-white mb-3">Quick Links</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <a asp-controller="Home" asp-action="Index" class="footer-link">Home</a>
+                            </li>
+                            <li class="mb-2">
+                                <a asp-controller="Home" asp-action="Privacy" class="footer-link">Privacy Policy</a>
+                            </li>
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                <li class="mb-2">
+                                    <a asp-controller="Dashboard" asp-action="Index" class="footer-link">Dashboard</a>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="mb-2">
+                                    <a asp-controller="Account" asp-action="Login" class="footer-link">Login</a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <h6 class="text-white mb-3">Connect</h6>
+                        <div class="social-links">
+                            <a href="#" class="me-2 social-link">
+                                <i class="fab fa-github"></i>
+                            </a>
+                            <a href="#" class="me-2 social-link">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="#" class="me-2 social-link">
+                                <i class="fab fa-linkedin"></i>
+                            </a>
+                        </div>
+                        <p class="text-white-50 mt-3 mb-0">
+                            &copy; 2025 PersonalCloudDrive<br/>
+                            All rights reserved.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
