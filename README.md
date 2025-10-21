@@ -234,3 +234,19 @@ If you encounter any issues or have questions:
 ---
 
 Made with ❤️ using ASP.NET Core
+
+## Screenshots
+
+Here are screenshots from the running application. They help new users see how the app looks and behaves.
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Register Page
+![Register Page](screenshots/Register Page .png)
+
+### Sign In Page
+![Sign In Page](screenshots/Sign In Page.png)
+
+### Storage View
+![Storage Page](screenshots/Storage Page.png)
