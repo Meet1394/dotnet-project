@@ -79,35 +79,6 @@ Open a browser at https://localhost:5001 (or as printed in output) and register/
 
 **Note:** You must register a new user account and log in before you can access the Dashboard and upload files.
 
-## Uploads
-
-Files uploaded are saved under `wwwroot/uploads/{userId}` by default. Upload path and limits are configured in `appsettings.json` under `StorageSettings`.
-
-## Git instructions — push this project to your GitHub repo
-
-If you want to push this project to `https://github.com/Meet1394/dotnet-project.git` do the following:
-
-```powershell
-# initialize git if not already initialized
-git init
-git add .
-git commit -m "Initial commit - PersonalCloudDrive"
-
-# add remote (replace URL with your repo URL)
-git remote add origin https://github.com/Meet1394/dotnet-project.git
-
-# push to GitHub
-git branch -M main
-git push -u origin main
-```
-
-If the remote already exists, you can instead set the URL:
-
-```powershell
-git remote set-url origin https://github.com/Meet1394/dotnet-project.git
-git push -u origin main
-```
-
 ## Project Structure
 
 ```
